@@ -1,0 +1,3 @@
+#Create a python script that allows you to encrypt your private key with a password of your choice.
+#Create another script to retrieve the private key and use it to generatethe account object.
+#Print the balance of this account on sepolia.
