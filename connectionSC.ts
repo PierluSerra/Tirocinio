@@ -23,7 +23,7 @@ import { RequestManager, ContractFactory } from 'eth-connect' // Importa Request
 import { executeTask } from '@dcl/sdk/ecs' //Per usare la funzione executeTask ho dovuto imolementare questa funzione
 
 
-// ABI per lo SmartContract
+// ABI dello SmartContract
 const contractAbi = [ 	
   { 		
     "inputs": [ 			
@@ -72,45 +72,48 @@ const contractAbi = [
     } 
 ];
 
-const contractAddress = '0xe666A0E5c72e5Df911Eb42762B36A7708b3166b2'; // Indirizzo dello smart contract
+//Variabile che memorizza l'indirizzo dello SmartContract
+const contractAddress = '0xe666A0E5c72e5Df911Eb42762B36A7708b3166b2'; 
 
-//indirizzo autorizzato
-//const authorizedAddress = '0xa8f01292f34e72954328c73ec3479528e0645b7d' // questo è il mio address di MetaMask
-
+// Variabili che vengono utilizzate per l'interazione con la porta(Apertura e Chiusura)
 const openPos: Quaternion = Quaternion.create(0, 1, 0)
 const closedPos: Quaternion = Quaternion.create(0, 0, 0)
 
 // Funzione principale asincrona
 executeTask(async () => {
-  let userData = getPlayer() //prende le specifiche del giocatore
+  // Variabile che permette di prendere le specifiche del giocatore
+  let userData = getPlayer() 
+
     try {
         engine.addSystem(circularSystem)
         engine.addSystem(changeColorSystem)
     
-        // Inizializzazione del provider Ethereum
+        // Inizializzazione del Provider Ethereum
         const provider = createEthereumProvider() // Crea un provider Ethereum
         const requestManager = new RequestManager(provider) // Crea un gestore delle richieste usando il provider
         const factory = new ContractFactory(requestManager, contractAbi) // Crea una factory per il contratto utilizzando il gestore delle richieste e l'ABI
         
+        // Mi creo una variabile per memorizzare lo SmartContract, specificando il suo indirizzo (ciò avviene grazie alla variabile contractAddress)
         const contract = (await factory.at(
             contractAddress
-        )) as any // Ottiene un'istanza del contratto specificando il suo indirizzo
+        )) as any 
 
-        // Verifica se l'utente è null o undefined prima di accedere, senza questo if dava errori su userData
+        // Verifico se il player che sta interagendo con la scena è Loggato con metamask o no
         if (userData && !userData.isGuest) {
-          // Ottieni l'indirizzo MetaMask memorizzato nello smart contract
+          // Ottengo l'indirizzo MetaMask memorizzato nello SmartContract grazie alla funzione getMetaMaskAddress inizializzata all'interno di esso
           const storedAddress = await contract.getMetaMaskAddress();
-          console.log("Indirizzo MetaMask memorizzato nello smart contract:", storedAddress);
+          console.log("Indirizzo MetaMask memorizzato nello smart contract:", storedAddress); //Faccio una log per un controllo di Routine
 
-          //associo ad un altra variabile l'indirizzo del player
+          // Creo ed associo ad un altra variabile l'indirizzo del Player
           const userAddress = userData.userId
-          console.log("Indirizzo Player:", userAddress);
+          console.log("Indirizzo Player:", userAddress); // Faccio una log per controllare l'indirizzo del Player(pratica usata come debugging)
 
           
-          // Variabile booleana per l'autorizzazione dell'utente
-          const isAuthorized = check(storedAddress, userAddress)
-          console.log("Autorizzazione impostata a:", isAuthorized)
+          // In queste righe di codice creo una variabile Booleana che viene settata grazie alla funzione check che controlla i due Address
+          const isAuthorized = check(storedAddress, userAddress) // Variabile booleana per l'autorizzazione dell'utente
+          console.log("Autorizzazione impostata a:", isAuthorized) // Log di Debugging
 
+          // Richiamo una delle funzioni principali di questo script, che mostra i muri con la porta e permette di interagirci se Autorizzati
           setupDoor(isAuthorized)
         }
 
@@ -119,18 +122,19 @@ executeTask(async () => {
     }
 })
 
-//questa funzione mi permette di controllare se i due indirizzi siano uguali
+// Funzione che Returna True solo se i due indirizzi sono uguali(Confronto)
 function check(storedAddress: any, userAddress: any): boolean {
-  //faccio una normalizzazione dei dati perché ho notato che alcune lettere erano in maiuscolo o in minuscolo
-  const storedAddressNormalized = storedAddress.toUpperCase();
+  // Eseguo una Normalizzazione dei dati perché i due indirizzi possono essere uguali ma con Maiuscole/Minuscole
+  const storedAddressNormalized = storedAddress.toUpperCase(); 
   const userAddressNormalized = userAddress.toUpperCase();
 
-  //controllo se i due indirizzi normalizzati sono uguali
+  // Confronto dei due indirizzi Normalizzati
   return storedAddressNormalized === userAddressNormalized;
 }
 
+// Funzione che permette la Creazione/Interazione dei muri e della porta
 function setupDoor(isAuthorized: boolean){
-  //crea i muri
+  // Creazione dei muri
   createWall(Vector3.create(5.75, 1, 3), Vector3.create(1.5, 2, 0.05))
   createWall(Vector3.create(3.25, 1, 3), Vector3.create(1.5, 2, 0.05))
 
@@ -141,17 +145,20 @@ function setupDoor(isAuthorized: boolean){
     rotation: closedPos
   })
 
-  const doorEntity = createWall(Vector3.create(0.5, 0, 0), Vector3.create(1, 2, 0.05), doorPivotEntity) //crea l'entità della porta, La porta è anche collegata al pivot, in modo che possa ruotare intorno ad esso.
-
-  //coloro la porta
+  // Creazione dell'entità della porta, La porta è anche collegata al pivot, in modo che possa ruotare intorno ad esso.
+  const doorEntity = createWall(Vector3.create(0.5, 0, 0), Vector3.create(1, 2, 0.05), doorPivotEntity) 
+  
+  // Colorazione della porta
   Material.setPbrMaterial(doorEntity, {
     albedoColor: Color4.Red(),
     metallic: 0.9,
     roughness: 0.1
   })
 
+  // Nel caso in cui l'utente non sia autorizzato, la porta non deve aprirsi.
+  // Viene eseguito un check per vedere se l'utente è autorizzato(isAuthorized == True) o meno.
   if(isAuthorized){
-      //  Questo toggle cambierà lo stato della porta da aperto a chiuso e viceversa quando viene attivato dall'utente.
+    //  Questo toggle cambierà lo stato della porta da aperto a chiuso e viceversa quando viene attivato dall'utente.
     utils.toggles.addToggle(doorPivotEntity, utils.ToggleState.Off, (value) => {
       if (value == utils.ToggleState.On) { //se ToggleState.On è True, significa che la porta deve essere aperta
         // open
@@ -175,7 +182,7 @@ function setupDoor(isAuthorized: boolean){
         })
       }
     })
-  }else{
+  }else{ // Nel caso non sia Autorizzato, la porta rimarrà sempre chiusa
     Tween.createOrReplace(doorPivotEntity, {
           mode: Tween.Mode.Rotate({
             start: openPos,
@@ -186,8 +193,7 @@ function setupDoor(isAuthorized: boolean){
         })
   }
  
-
-  //gestisce l'evento di click sulla porta, consentendo all'utente di aprire e chiudere la porta semplicemente cliccandoci sopra
+  // Gestisce l'evento di click sulla porta, consentendo all'utente di aprire e chiudere la porta semplicemente cliccandoci sopra
   pointerEventsSystem.onPointerDown(
     {
       entity: doorEntity,
@@ -202,6 +208,7 @@ function setupDoor(isAuthorized: boolean){
   )
 }
 
+// Funzione che permette la creazione dei Muri
 function createWall(position: Vector3, scale: Vector3, parent?: Entity) {
   const WallEntity = engine.addEntity()
   Transform.create(WallEntity, {
