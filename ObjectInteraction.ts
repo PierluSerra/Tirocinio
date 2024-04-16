@@ -33,19 +33,6 @@ const contractAbi = [
 				"type": "address"
 			}
 		],
-		"name": "setAuth",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "user",
-				"type": "address"
-			}
-		],
 		"name": "isAuth",
 		"outputs": [
 			{
@@ -56,11 +43,24 @@ const contractAbi = [
 		],
 		"stateMutability": "view",
 		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			}
+		],
+		"name": "setAuth",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
 	}
 ]
 
 //Variabile che memorizza l'indirizzo dello SmartContract
-const contractAddress = '0xA8F01292f34E72954328C73EC3479528E0645b7D'; 
+const contractAddress = '0xcfC9Abe8BbE478FA250588eEd649Ac1AF7873c86'; 
 
 // Variabili che vengono utilizzate per l'interazione con la porta(Apertura e Chiusura)
 const openPos: Quaternion = Quaternion.create(0, 1, 0)
@@ -91,7 +91,7 @@ executeTask(async () => {
 })
 
 async function registerUser(){
-  /*try {*/
+  try {
     console.log("Primo Punto")
    // Inizializzazione del Provider Ethereum
    const provider = createEthereumProvider() // Crea un provider Ethereum
@@ -117,18 +117,17 @@ async function registerUser(){
         }
       )
       console.log("Quinto Punto, Dopo la chiamata della funzione")
-
-      console.log(res)
-
+      const confirmation = (await res.at(res as string)) as any
+      console.log(confirmation)
       const checked = await contract.isAuth(userData.userId)
-
       console.log("Valore booleano returnato dalla funzione: ", checked)
-		}
+    }
 
-  /*} catch (error) {
+  } catch (error) {
       console.error('Errore durante la registrazione dell\'utente:', error);
-  }*/
+  }
 }
+
 
 // Funzione che Returna True solo se i due indirizzi sono uguali(Confronto)
 function check(storedAddress: any, userAddress: any): boolean {
