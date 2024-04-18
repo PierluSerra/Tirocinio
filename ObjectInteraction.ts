@@ -33,15 +33,9 @@ const contractAbi = [
 				"type": "address"
 			}
 		],
-		"name": "isAuth",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "view",
+		"name": "setAuth",
+		"outputs": [],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
@@ -52,19 +46,27 @@ const contractAbi = [
 				"type": "address"
 			}
 		],
-		"name": "setAuth",
-		"outputs": [],
-		"stateMutability": "nonpayable",
+		"name": "isAuth",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
 		"type": "function"
 	}
 ]
 
 //Variabile che memorizza l'indirizzo dello SmartContract
-const contractAddress = '0xcfC9Abe8BbE478FA250588eEd649Ac1AF7873c86'; 
+const contractAddress = '0xC7135F80Aa2C50b116350F3bB80bE1de7b5027C9'; 
 
 // Variabili che vengono utilizzate per l'interazione con la porta(Apertura e Chiusura)
 const openPos: Quaternion = Quaternion.create(0, 1, 0)
 const closedPos: Quaternion = Quaternion.create(0, 0, 0)
+
+let checked: any
 
 // Funzione principale asincrona
 executeTask(async () => {
@@ -91,7 +93,7 @@ executeTask(async () => {
 })
 
 async function registerUser(){
-  try {
+  //try {
     console.log("Primo Punto")
    // Inizializzazione del Provider Ethereum
    const provider = createEthereumProvider() // Crea un provider Ethereum
@@ -108,6 +110,9 @@ async function registerUser(){
 
    let userData = getPlayer()
 		if (userData && !userData.isGuest) {
+        const block = await requestManager.eth_blockNumber()
+        console.log(await requestManager.eth_getTransactionCount(userData.userId, block))
+
         console.log("Quarto Punto, Dentro l'IF")
         // Perform a function from the contract
         const res = await contract.setAuth(
@@ -116,15 +121,89 @@ async function registerUser(){
           from: userData.userId,
         }
       )
+      const block2 = await requestManager.eth_blockNumber()
+      console.log(await requestManager.eth_getTransactionCount(userData.userId, block2))
+
       console.log("Quinto Punto, Dopo la chiamata della funzione")
-      const confirmation = (await res.at(res as string)) as any
-      console.log(confirmation)
-      const checked = await contract.isAuth(userData.userId)
-      console.log("Valore booleano returnato dalla funzione: ", checked)
+      
+
+      //await waitForTransactionCompletion(res)
+      //console.log("Indirizzo della Transazione: ", res)
+
+      // Attendi l'evento di autorizzazione
+      //await waitForAuthorizationEvent(contract, userData.userId);
+
+      //const checked = await contract.isAuth(userData.userId)
+      //console.log("Valore booleano returnato dalla funzione: ", cicle(contract, userData.userId))
+      cicle(contract, userData.userId)
     }
 
-  } catch (error) {
+ /* } catch (error) {
       console.error('Errore durante la registrazione dell\'utente:', error);
+  }*/
+}
+
+async function cicle(contract: any, userId: string): Promise<void> {
+  checked = await contract.isAuth(userId);
+  if (!checked) {
+      await poll(contract, userId);
+  }
+  console.log("Valore della Checked: ", checked)
+}
+
+async function poll(contract: any, userId: string): Promise<void> {
+  const pollingInterval = 10000; // Intervallo di polling in millisecondi
+
+  async function checkAndRetry(): Promise<void> {
+      checked = await contract.isAuth(userId);
+      if (!checked) {
+          await delay(pollingInterval);
+          await checkAndRetry();
+      }
+  }
+
+  await checkAndRetry();
+}
+
+async function delay(ms: number): Promise<void> {
+  return new Promise<void>(resolve => {
+      // Simuliamo un ritardo senza setTimeout
+      const start = Date.now();
+      while (Date.now() - start < ms) {}
+      resolve();
+  });
+}
+
+
+async function waitForAuthorizationEvent(contract: any, userId: string): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+      const handler = (user: string, status: boolean) => {
+          if (user === userId && status) {
+              console.log('Evento di autorizzazione ricevuto');
+              contract.off("AuthorizationSet", handler); // Rimuovi il gestore dell'evento
+              resolve();
+          }
+      };
+
+      contract.on("AuthorizationSet", handler);
+  });
+}
+
+
+async function waitForTransactionCompletion(txId: string, retriesOnEmpty?: number): Promise<any> {
+  //retriesOnEmpty corrisponde al numero di tentativi che proverà a fare
+  const provider = createEthereumProvider() // Crea un provider Ethereum
+  // Crea un'istanza di RequestManager
+  const requestManager = new RequestManager(provider);
+
+  try {
+      // Attendi il completamento della transazione
+      const result = await requestManager.waitForCompletion(txId, retriesOnEmpty);
+      console.log('Transazione completata:', result);
+      return result; // Ritorna il risultato della transazione completata
+  } catch (error) {
+      console.error('Errore durante l\'attesa del completamento della transazione:', error);
+      throw error; // Rilancia l'errore
   }
 }
 
